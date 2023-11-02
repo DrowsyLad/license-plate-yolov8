@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 
 #Load the Model
-model_640 = YOLO('~/sis/best.pt')
+model_640 = YOLO('best.pt')
 
 print('data loaded')
 print('oke')
@@ -13,7 +13,7 @@ WHITE = 2
 YELLOW = 3
 
 #camera
-cam = cv2.VideoCapture('~/sis/angkot.mp4')
+cam = cv2.VideoCapture('angkot-1.mp4')
 print('oke')
 
 while True:
