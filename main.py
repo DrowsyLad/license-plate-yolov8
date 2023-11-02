@@ -4,7 +4,9 @@ import serial
 import time
 
 #Load the Model
+print("Loading model...")
 detect = YOLO('best.pt')
+print("Success")
 
 BLACK = 0
 RED = 1
@@ -14,13 +16,23 @@ YELLOW = 3
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUDRATE = 9600
 
+INFERENCE_SIZE = 320
+
 prev_frame_time = time.time()
 
 #camera
-cam = cv2.VideoCapture('angkot-1.mp4')
+print("Initializing source...")
+source = 'angkot-1.mp4'
+cam = cv2.VideoCapture(source)
+if len(source) == 1:
+    print("Using /dev/video"+source)
+else:
+    print("Using "+source)
 
 #serial handler
+print("Initializing serial handler...")
 handler = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+print("Success")
 
 gate_status = "Closed"
 
@@ -29,19 +41,24 @@ def debug_vision(frame, status:str):
     new_frame_time = time.time() 
     fps = 1/(new_frame_time-prev_frame_time) 
     prev_frame_time = new_frame_time 
-    cv2.putText(frame, str("Status: " + status), (int(10), int(16)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)  
-    cv2.putText(frame, str("FPS: " + str(round(fps, 1))), (int(10), int(32)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)  
+    cv2.putText(frame, str("Status: " + status), (int(10), int(32)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 1)  
+    cv2.putText(frame, str("FPS: " + str(round(fps, 1))), (int(10), int(64)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 1)  
     return frame
+
+print("Initializing detector...")
 
 while True:
     ret, frame = cam.read()
+    
     if frame is None:
         print("Video ended or Camera disconnected. Exiting...")
         break
 
+    # frame = cv2.resize(frame, frame.shape[:2]//2)
+
     black, red, white, yellow = False, False, False, False
     closest, biggest_y = None, 0
-    results = detect(frame, imgsz=320)
+    results = detect(frame, imgsz=INFERENCE_SIZE, stream=True)
     for result in results:
         frame = result.plot()
         for box in result.boxes:
