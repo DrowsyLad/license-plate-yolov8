@@ -31,12 +31,14 @@ print("Success")
 #camera
 print("Initializing source...")
 video_default = 'angkot-1.mp4'
+next_video = 0
 if args.filename is not None:
     video = args.filename
     if os.path.exists(video) is False:
         print("File "+video+" not found")
         video = video_default
 elif args.videoid is not None:
+    next_video = args.videoid
     video = "video-"+str(args.videoid)+".mp4"
     if os.path.exists(video) is False:
         print("File "+video+" not found")
@@ -81,8 +83,10 @@ while True:
     ret, frame = source.read()
     
     if frame is None:
-        print("Video ended or Camera disconnected. Exiting...")
-        break
+        print("Video ended or Camera disconnected. Loading next video...")
+        video = "video-"+str(next_video+1)+".mp4"
+        print("Using video file "+video)
+        continue
 
     # frame = cv2.resize(frame, (INFERENCE_SIZE, INFERENCE_SIZE))
 
