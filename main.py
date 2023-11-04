@@ -13,7 +13,7 @@ YELLOW = 3
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUDRATE = 9600
 
-INFERENCE_SIZE = 480
+INFERENCE_SIZE = 320
 
 prev_frame_time = time.time()
 
@@ -30,7 +30,7 @@ print("Success")
 
 #camera
 print("Initializing source...")
-video_default = 'angkot-1.mp4'
+video_default = 'video-1.mp4'
 next_video = 0
 if args.filename is not None:
     video = args.filename
@@ -38,7 +38,7 @@ if args.filename is not None:
         print("File "+video+" not found")
         video = video_default
 elif args.videoid is not None:
-    next_video = args.videoid
+    next_video = int(args.videoid)
     video = "video-"+str(args.videoid)+".mp4"
     if os.path.exists(video) is False:
         print("File "+video+" not found")
@@ -84,9 +84,15 @@ while True:
     
     if frame is None:
         print("Video ended or Camera disconnected. Loading next video...")
-        video = "video-"+str(next_video+1)+".mp4"
+        next_video += 1
+        video = "video-"+str(next_video)+".mp4"
         print("Using video file "+video)
-        continue
+        if os.path.exists(video) is False:
+            print("File "+video+" not found")
+            break
+        else:
+            source = cv2.VideoCapture(video)
+            continue
 
     # frame = cv2.resize(frame, (INFERENCE_SIZE, INFERENCE_SIZE))
 
