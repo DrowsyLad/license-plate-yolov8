@@ -3,11 +3,6 @@ from ultralytics import YOLO
 import serial
 import time
 
-#Load the Model
-print("Loading model...")
-detect = YOLO('best.pt')
-print("Success")
-
 BLACK = 0
 RED = 1
 WHITE = 2
@@ -16,18 +11,31 @@ YELLOW = 3
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUDRATE = 9600
 
-INFERENCE_SIZE = 320
+INFERENCE_SIZE = 480
 
 prev_frame_time = time.time()
 
+#Load the Model
+print("Loading model with {}px inference size...".format(INFERENCE_SIZE))
+detect = YOLO('yolov8-epoch100.pt')
+print("Success")
+
 #camera
 print("Initializing source...")
-source = 'angkot-1.mp4'
-cam = cv2.VideoCapture(source)
-if len(source) == 1:
-    print("Using /dev/video"+source)
-else:
-    print("Using "+source)
+video = 'angkot-1.mp4'
+camera = 0
+try:
+    cam = cv2.VideoCapture(camera)
+    _, check = cam.read()
+    if check is None:
+        camera += 1
+        cam = cv2.VideoCapture(camera)
+        _, check = cam.read()
+    print("Using /dev/video"+str(camera))
+finally:
+    print("Error loading camera. Switching to video...")
+    cam = cv2.VideoCapture(video)
+    print("Using "+video)
 
 #serial handler
 print("Initializing serial handler...")
@@ -54,7 +62,7 @@ while True:
         print("Video ended or Camera disconnected. Exiting...")
         break
 
-    # frame = cv2.resize(frame, frame.shape[:2]//2)
+    # frame = cv2.resize(frame, (INFERENCE_SIZE, INFERENCE_SIZE))
 
     black, red, white, yellow = False, False, False, False
     closest, biggest_y = None, 0
