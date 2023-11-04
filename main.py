@@ -50,6 +50,7 @@ for index in range (0,2):
     if os.path.exists('/dev/video'+str(index)):
         camera = index
         print("Camera found. Using /dev/video"+str(camera))
+        break
 
 if camera is None:
     print("Error loading camera. Switching to video...")
