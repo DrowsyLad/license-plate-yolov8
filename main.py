@@ -2,6 +2,8 @@ import cv2
 from ultralytics import YOLO
 import serial
 import time
+import os
+import argparse
 
 BLACK = 0
 RED = 1
@@ -15,6 +17,12 @@ INFERENCE_SIZE = 480
 
 prev_frame_time = time.time()
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-f', '--filename')
+parser.add_argument('-v', '--videoid')
+args = parser.parse_args()
+print("filename: {}, video id: {}".format(args.filename, args.videoid))
+
 #Load the Model
 print("Loading model with {}px inference size...".format(INFERENCE_SIZE))
 detect = YOLO('yolov8-epoch100.pt')
@@ -22,20 +30,33 @@ print("Success")
 
 #camera
 print("Initializing source...")
-video = 'angkot-1.mp4'
-camera = 0
-try:
-    cam = cv2.VideoCapture(camera)
-    _, check = cam.read()
-    if check is None:
-        camera += 1
-        cam = cv2.VideoCapture(camera)
-        _, check = cam.read()
-    print("Using /dev/video"+str(camera))
-finally:
+video_default = 'angkot-1.mp4'
+if args.filename is not None:
+    video = args.filename
+    if os.path.exists(video) is False:
+        print("File "+video+" not found")
+        video = video_default
+elif args.videoid is not None:
+    video = "video-"+str(args.videoid)+".mp4"
+    if os.path.exists(video) is False:
+        print("File "+video+" not found")
+        video = video_default
+else:
+    video = video_default
+camera = None
+source = None
+
+for index in range (0,2):
+    if os.path.exists('/dev/video'+str(index)):
+        camera = index
+        print("Camera found. Using /dev/video"+str(camera))
+
+if camera is None:
     print("Error loading camera. Switching to video...")
-    cam = cv2.VideoCapture(video)
-    print("Using "+video)
+    source = cv2.VideoCapture(video)
+    print("Using video file "+video)
+else:
+    source = cv2.VideoCapture(camera)
 
 #serial handler
 print("Initializing serial handler...")
@@ -56,7 +77,7 @@ def debug_vision(frame, status:str):
 print("Initializing detector...")
 
 while True:
-    ret, frame = cam.read()
+    ret, frame = source.read()
     
     if frame is None:
         print("Video ended or Camera disconnected. Exiting...")
@@ -109,7 +130,7 @@ while True:
     cv2.imshow('frame', cv2.resize(frame, (1000, 600)))
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        cam.release()
+        source.release()
         cv2.destroyAllWindows()
         break
     #time.sleep(1)  
