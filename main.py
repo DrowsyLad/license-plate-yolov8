@@ -13,9 +13,11 @@ YELLOW = 3
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUDRATE = 9600
 
-INFERENCE_SIZE = 320
+INFERENCE_SIZE = 1280
 
+global inference_time, prev_frame_time
 prev_frame_time = time.time()
+inference_time = 0
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', '--filename')
@@ -57,11 +59,20 @@ for index in range (0,2):
 if camera is None:
     print("Error loading camera. Switching to video...")
     source = cv2.VideoCapture(video)
+    if video == video_default:
+        next_video+=1
     print("Using video file "+video)
 else:
     source = cv2.VideoCapture(camera)
 
-#serial handler
+# output video handler
+print("Initializing output video...")
+filename = "output_" + str(time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime())) + ".mp4"
+filename = "Output/" + filename
+print("Saving output video to "+filename)
+result_video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(source.get(3)), int(source.get(4)))) 
+
+# serial handler
 print("Initializing serial handler...")
 handler = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
 print("Success")
@@ -75,12 +86,16 @@ def debug_vision(frame, status:str):
     prev_frame_time = new_frame_time 
     cv2.putText(frame, str("Status: " + status), (int(10), int(32)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 1)  
     cv2.putText(frame, str("FPS: " + str(round(fps, 1))), (int(10), int(64)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 1)  
+    cv2.putText(frame, str("Inference Time: " + str(inference_time) + "ms"), (int(10), int(96)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 1)  
     return frame
 
 print("Initializing detector...")
 
 while True:
     ret, frame = source.read()
+
+    black, red, white, yellow = False, False, False, False
+    closest, biggest_y = None, 0
     
     if frame is None:
         print("Video ended or Camera disconnected. Loading next video...")
@@ -94,11 +109,10 @@ while True:
             source = cv2.VideoCapture(video)
             continue
 
-    # frame = cv2.resize(frame, (INFERENCE_SIZE, INFERENCE_SIZE))
-
-    black, red, white, yellow = False, False, False, False
-    closest, biggest_y = None, 0
+    time_before_inference = time.perf_counter()
     results = detect(frame, imgsz=INFERENCE_SIZE, stream=True)
+    # inference_time = round(float(time.perf_counter() - time_before_inference) * 1000, 2)
+
     for result in results:
         frame = result.plot()
         for box in result.boxes:
@@ -115,6 +129,8 @@ while True:
                 yellow = True
         break
 
+    inference_time = round(float(time.perf_counter() - time_before_inference) * 1000, 2)
+    
     if black: 
         print("Ada kendaraan pribadi")
     if white:
@@ -138,10 +154,15 @@ while True:
 
     frame = debug_vision(frame, gate_status)
 
-    cv2.imshow('frame', cv2.resize(frame, (1000, 600)))
+    if ret:
+        result_video.write(frame)
+
+    cv2.imshow('frame', frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        source.release()
-        cv2.destroyAllWindows()
         break
     #time.sleep(1)  
+
+source.release()
+result_video.release()
+cv2.destroyAllWindows()
